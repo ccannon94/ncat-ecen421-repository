@@ -1,0 +1,620 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{graphicx}
+\graphicspath{report_images/}
+\usepackage{appendix}
+\usepackage{listings}
+\usepackage{float}
+\usepackage{multirow}
+\usepackage{amsthm}
+% The next three lines make the table and figure numbers also include section number
+\usepackage{chngcntr}
+\counterwithin{table}{section}
+\counterwithin{figure}{section}
+% Needed to make titling page without a page number
+\usepackage{titling}
+
+% DOCUMENT INFORMATION =================================================
+\font\titleFont=cmr12 at 11pt
+\title {{\titleFont ECEN 421: Embedded Systems Design\\ North Carolina Agricultural and Technical State University \\ Department of Electrical and Computer Engineering}} % Declare Title
+\author{\titleFont Chris Cannon} % Declare authors
+\date{\titleFont October 1, 2018}
+% ======================================================================
+
+\begin{document}
+
+\begin{titlingpage}
+\maketitle
+\begin{center}
+	Homework 4
+\end{center}
+\end{titlingpage}
+
+\section{Listing 4.2}
+\subsection{Summary}
+This program implements basic data storage and access operations. Registers 0-2 are populated, and then accessed. The stack is accessed using push and pop.
+\subsection{Assembly Code}
+\begin{lstlisting}
+	.text
+	.align 2
+
+MemAddr .field 0x20000040; Memory address
+BitBandAddr .field 0x22000810; Bit-band address
+
+	.global main
+
+main:
+
+	;Data moving instructions
+	MOV R0, #09h; RR0 = 0x09
+	MOV R1, #11d; R1 = 0x0B
+	MOV R2, #00001010b; R1 = 0x0A
+
+	;Memory access instructions
+	LDR R3, MemAddr;
+	STR R2, [R3];
+	STR R1, [R3, #4]!;
+	LDR R0, [R3];
+
+	PUSH {R3}
+	POP {R4}
+
+	;Bit-band operation
+	LDR R5, BitBandAddr
+	LDR R6, [R5]
+	MOV R6, #1
+	STR R6, [R5]
+
+	;Forever loop
+	B $
+
+	.end
+\end{lstlisting}
+\subsection{In-Line Assembly}
+\begin{lstlisting}
+#include "msp.h"
+void main(void)
+{
+    WDTCTL = WDTPW | WDTHOLD;
+
+    __asm(" MOV R0, #09h");
+    __asm(" MOV R1, #11d");
+    __asm(" MOV R2, #00001010b");
+    __asm(" MOV R7, #0040h");
+    __asm(" MOVT R7, #2000h");
+    __asm(" LDR R3, [R7]");
+    __asm(" STR R2, [R3]");
+    __asm(" STR R1, [R3, #4]!");
+    __asm(" LDR R0, [R3]");
+    __asm(" PUSH {R3}");
+    __asm(" POP {R4}");
+    __asm(" MOV R8, #0810h");
+    __asm(" MOVT R8, #2200h");
+    __asm(" LDR R5, [R8]");
+    __asm(" LDR R6, [R5]");
+    __asm(" MOV R6, #1"); /
+    __asm(" STR R6, [R5]");
+
+    while(1);
+}
+\end{lstlisting}
+\subsection{C Code}
+\begin{lstlisting}[language = C]
+#include "msp.h"
+void main(void)
+{
+	
+    WDTCTL = WDTPW | WDTHOLD;           // Stop watchdog timer
+	
+     char Reg0 = 0x09;
+     char Reg1 = 0x0B;
+     char Reg2 = 0x0A;
+
+
+     int Reg3 = 0x20000040;
+     Reg3 = Reg3 + 0x00000004;
+     Reg0 = Reg1;
+
+     int Reg4 = Reg3;
+
+
+     int Reg5 = 0x22000810;
+     char Reg6 = 0x01;
+
+    while(1);
+}
+\end{lstlisting}
+
+\section{Listing 4.3}
+\subsection{Summary}
+After populating registers, this program completes basic arithmetic operations of subtraction, multiplication, and division. Then it completes logical operations of bitwise AND, OR, Exclusive Or, and Shifts.
+\subsection{Assembly Code}
+\begin{lstlisting}
+	.text
+	.align 2
+	.global main
+
+main:
+
+	;Arithmetic operation instructions
+	MOV R0, #09h; R0 = 0x09
+	MOV R1, #11d; R1 = 0x0B
+	MOV R2, #00001010b; R1 = 0x0A
+
+	ADD R3, R0, R1; R3 = R0 + R1 = 0x14
+	SUB R4, R2, #0002h; R4 = R2 - 0x02 = 0x08
+	MOV R5, R2; R5 = R2
+	MUL R5, R0; R5 = R5 * R0 = 0x5A
+	SDIV R6, R5, R1; R6 = R5 / R1 = 0x08
+
+	;Logic operation instructions
+	MOV R0, #09h; R0 = 0x09
+	MOV R1, #11d; R1 = 0x0B
+	MOV R2, #00001010b; R1 = 0x0A
+
+	AND R3, R0, R1; R3 = R0 + R1 = 0x14
+	ORR R4, R1, #0002h; R4 = R2 - 0x02 = 0x08
+	EOR R5, R0, R2; R5 = R2
+	LSL R6, R0, #2; R5 = R5 * R0 = 0x5A
+	LSR R7, R0, #2; R5 = R5 * R0 = 0x5A
+
+	;Saturating arithmetic instructions
+	MOV R0, #0FFFFh; R0 = 0x0000FFFF
+	MOVT R0, #7FFFh; R0 = 0x7FFFFFFF
+	MOV R1, #0FFFFh; R1 = 0x0000FFFF
+	MOVT R1, #7FFFh; R1 = 0x7FFFFFFF
+
+	ADDS R2, R1, R0; R2 = 0xFFFFFFFE, overflow
+	QADD R3, R1, R0; R# = 0x7FFFFFFF, saturation
+
+	;Forever loop
+	B $
+
+	.end
+\end{lstlisting}
+\subsection{In-Line Assembly}
+\begin{lstlisting}
+#include "msp.h"
+void main(void)
+{
+	
+    WDTCTL = WDTPW | WDTHOLD;           // Stop watchdog timer
+
+    //Arithmetic operation instructions
+    __asm(" MOV R0, #09h"); 
+    __asm(" MOV R1, #11d"); 
+    __asm(" MOV R2, #00001010b"); 
+
+    __asm(" ADD R3, R0, R1"); 
+    __asm(" SUB R4, R2, #0002h"); 
+    __asm("  MOV R5, R2"); 
+    __asm(" MUL R5, R0"); 
+    __asm(" SDIV R6, R5, R1"); 
+   //Logic operation instructions
+   __asm(" MOV R0, #09h"); 
+   __asm(" MOV R1, #11d"); 
+   __asm(" MOV R2, #00001010b"); 
+
+   __asm(" AND R3, R0, R1"); 
+   __asm(" ORR R4, R1, #0002h"); 
+   __asm(" EOR R5, R0, R2"); 
+   __asm(" LSL R6, R0, #2"); 
+   __asm(" LSR R7, R0, #2"); 
+
+   //Saturating arithmetic instructions
+   __asm(" MOV R0, #0FFFFh");
+   __asm(" MOVT R0, #7FFFh");
+   __asm(" MOV R1, #0FFFFh");
+   __asm(" MOVT R1, #7FFFh"); 
+
+   __asm(" ADDS R2, R1, R0");
+   __asm(" QADD R3, R1, R0");
+
+   while(1);
+}
+\end{lstlisting}
+\subsection{C Code}
+\begin{lstlisting}
+#include "msp.h"
+void main(void)
+{
+    WDTCTL = WDTPW | WDTHOLD;           // Stop watchdog timer
+    //Arithmetic operation instructions
+    int Reg0 = 0x09; 
+    int Reg1 = 0x0B; 
+    int Reg2 = 0x0A; 
+
+    int Reg3 = Reg0 + Reg1; 
+    int Reg4 = Reg2 - 0x02; 
+    int Reg5 = Reg2; 
+    Reg5 = Reg5 * Reg0; 
+    int Reg6 = Reg5 / Reg1;
+
+   //Logic operation instructions
+    Reg0 = 0x09; 
+    Reg1 = 0x0B; 
+    Reg2 = 0x0A; 
+    Reg3 = Reg0 & Reg1; 
+    Reg4 = Reg2 | 0x02; 
+    Reg5 = Reg0 ^ Reg2; 
+    Reg6 = Reg0 << 2;
+    int Reg7 = Reg0 >> 2; 
+
+   //Saturating arithmetic instructions
+    Reg0 = 0x0000FFFF; 
+    Reg0 = 0x7FFFFFFF; 
+    Reg1 = 0x0000FFFF; 
+    Reg1 = 0x7FFFFFFF; 
+    Reg2 = Reg1 + Reg0; 
+    Reg3 = Reg1 + Reg0; 
+    if(Reg3 == 0xFFFFFFFE)
+        Reg3 = Reg1; 
+   while(1);
+}
+\end{lstlisting}
+
+\section{Listing 4.4}
+\subsection{Summary}
+This program implements loops and branching for the first time, it implements two basic loops, while and for. Within these loops, basic arithmetic is done and conditions are checked.
+\subsection{Assembly Code}
+\begin{lstlisting}
+	.text
+	.align 2
+	.global main
+
+main:
+
+	;if else
+	MOV R4, #05h; R4 = 0x05
+	CMPS R4, #06h;
+	BHS Greater; Branch if higher or same
+	AND R4, #-1; R4 = R4 - 1
+	B Done1
+Greater:
+	ADD R4, #1; R4 = R4 + 1
+Done1:
+
+	;for
+	MOV R4, #0Ah; R4 = 0x0A
+Loop1:
+	ADDS R4, #-1; R4 = R4 - 1
+	BPL Loop1
+
+	;while
+	MOV R4, #0006h; R4 = 0x06
+	MOV R5, #0002h; R5 = 0x02
+Loop2:
+	ADDS R4, #-1; R4 = 0x06
+	CMPS R4, R5;
+	BNE Loop2
+
+	;forever loop
+	B $
+
+	.end
+\end{lstlisting}
+\subsection{In-Line Assembly}
+\begin{lstlisting}
+#include "msp.h"
+void main(void)
+{
+    WDTCTL = WDTPW | WDTHOLD;           // Stop watchdog timer
+
+    //if else
+    __asm(" MOV R4, #05h"); 
+    int Reg4 = 0x05;
+    if(Reg4 >= 0x06) 
+    {
+        __asm(" ADD R4, #-1"); 
+    }
+    else
+    {
+        __asm(" ADD R4, #1");
+    }
+
+   //for
+    __asm(" MOV R4, #0Ah"); 
+    Reg4 = 0x0A;
+    for(Reg4; Reg4 > 0;  ) 
+    {
+        __asm(" ADDS R4, #-1"); 
+        Reg4 = Reg4 - 1;
+    }
+
+   //while
+    __asm(" MOV R4, #0006h"); 
+    Reg4 = 0x06;
+    __asm(" MOV R5, #0002h"); 
+   int Reg5 = 0x02;
+   while(Reg4 != Reg5)
+   {
+       __asm(" ADDS R4, #-1"); 
+       Reg4 = Reg4 - 1;
+   }
+
+    while(1);
+}
+\end{lstlisting}
+\subsection{C Code}
+\begin{lstlisting}
+#include "msp.h"
+
+void main(void)
+{
+	
+    WDTCTL = WDTPW | WDTHOLD;           // Stop watchdog timer
+
+    //if else
+    int Reg4 = 0x05; 
+    if(Reg4 >= 0x06) 
+    {
+        Reg4 = Reg4 - 1; 
+    }
+    else
+    {
+        Reg4 = Reg4 + 1; 
+    }
+
+   //for
+    Reg4 = 0X0A;  
+    for(Reg4; Reg4 > 0; Reg--) 
+    {
+         
+    }
+
+   //while
+    Reg4 = 0x06; 
+    int Reg5 = 0x02; 
+
+    while(Reg4 != Reg5) 
+    {
+        Reg4 = Reg4 - 1; 
+    }
+
+    while(1);
+}
+\end{lstlisting}
+
+\section{4.5}
+\subsection{Summary}
+This code implements the first subroutine, or a method in C. This replace subroutine is called and executed as the code runs. It simply trades some values of registers.
+\subsection{Assembly Code}
+\begin{lstlisting}
+	.text
+	.align 2
+	.global main
+
+main:
+	MOV R5, #05h; R5 = 9x95
+	MOV R6, #06h; R6 = 0x06
+	MOV R7, #07h; R7 = 0x07
+	BL Replace;
+
+	B $;
+
+Replace:
+	MOV R4, R7
+	MOV R7, R6
+	MOV R6, R5
+	MOV R5, R4
+	BX LR
+
+	.end
+\end{lstlisting}
+\subsection{In-Line Assembly}
+\begin{lstlisting}
+ #include "msp.h"
+
+void replace();
+
+/**
+ * main.c
+ */
+void main(void)
+{
+	WDT_A->CTL = WDT_A_CTL_PW | WDT_A_CTL_HOLD;		// stop watchdog timer
+
+	// R5 = 9x95
+	__asm(" MOV R5, #05h");
+	// R6 = 0x06
+	__asm(" MOV R6, #06h");
+	// R7 = 0x07
+	__asm(" MOV R7, #07h");
+
+	replace();
+
+	while(1);
+
+}
+
+void replace()
+{
+    __asm(" MOV R4, R7");
+    __asm(" MOV R7, R6");
+    __asm(" MOV R6, R5");
+    __asm(" MOV R5, R4");
+}
+\end{lstlisting}
+\subsection{C Code}
+\begin{lstlisting}
+#include "msp.h"
+
+void replace();
+
+char Reg4;
+char Reg5;
+char Reg6;
+char Reg7;
+
+/**
+ * main.c
+ */
+void main(void)
+{
+	WDT_A->CTL = WDT_A_CTL_PW | WDT_A_CTL_HOLD;		// stop watchdog timer
+
+	// R5 = 9x95
+	Reg5 = 0x05;
+	// R6 = 0x06
+	Reg6 = 0x06;
+	// R7 = 0x07
+	Reg7 = 0x07;
+
+	replace();
+
+	while(1);
+
+}
+
+void replace()
+{
+    Reg4 = Reg7;
+    Reg7 = Reg6;
+    Reg6 = Reg5;
+    Reg5 = Reg4;
+}
+\end{lstlisting}
+
+\section{4.6}
+\subsection{Summary}
+This program works with ways to access select bits in registers such as PKHBT, which accesses certain bits from a register.
+\subsection{Assembly Code}
+\begin{lstlisting}
+	.text
+	.align 2
+	.global main
+
+main:
+
+	;Bitfield instructions
+	MOV R6, #0A12Fh; R6 = 0xA12F
+	BFC R6, #8, #12; R6 = 0x2F
+	SBFX R7, R6, #4, #8; R7 = 0x2
+
+	;Packing and unpacking instructions
+	MOV R8, #0AABBh; R8 = 0xAABB
+	MOV R9, #0CCDh; R9 = 0xCCDD
+
+	PKHBT R10, R8, R9, LSL #16; R9 = 0xCCDDAABB
+	SXTH R11, R10, ROR #16; R10 = 0xFFFFCCDD
+
+	;Misc instructions
+	NOP
+	DMB
+	DSB
+	MRS R12, APSR
+	NOP
+
+	.end
+\end{lstlisting}
+\subsection{In-Line Assembly}
+\begin{lstlisting}
+#include "msp.h"
+
+
+/**
+ * main.c
+ */
+void main(void)
+{
+	WDT_A->CTL = WDT_A_CTL_PW | WDT_A_CTL_HOLD;		// stop watchdog timer
+
+    //Bitfield instructions
+    // R6 = 0xA12F
+	__asm(" MOV R6, #0A12Fh");
+	// R6 = 0x2F
+    __asm(" BFC R6, #8, #12");
+    // R7 = 0x2
+    __asm(" SBFX R7, R6, #4, #8");
+
+    //Packing and unpacking instructions
+    // R8 = 0xAABB
+    __asm(" MOV R8, #0AABBh");
+    // R9 = 0xCCDD
+    __asm(" MOV R9, #0CCDh");
+
+    // R9 = 0xCCDDAABB
+    __asm(" PKHBT R10, R8, R9, LSL #16");
+    //R10 = 0xFFFFCCDD
+    __asm(" SXTH R11, R10, ROR #16");
+
+    //Misc instructions
+    __asm(" NOP \n"
+          " DMB \n"
+          " DSB \n"
+          " MRS R12, APSR \n"
+          " NOP \n");
+}
+\end{lstlisting}
+\subsection{C Code}
+\begin{lstlisting}
+#include "msp.h"
+
+volatile int *memlock;
+volatile int *synclock;
+
+void lock(volatile int *l);
+void unlock(volatile int *l);
+
+/**
+ * main.c
+ */
+void main(void)
+{
+	WDT_A->CTL = WDT_A_CTL_PW | WDT_A_CTL_HOLD;		// stop watchdog timer
+
+	*memlock = 0;
+	*synclock = 0;
+
+	//Bitfield instructions
+	// R6 = 0xA12F
+	char Reg6 = 0x0A12F;
+	//Clear bits 8 - 20 by anding them with 0
+	Reg6 & 0xFF000FF;
+
+	//Extract bits 4 - 12 from Reg6
+	char Reg7 = 0x8000FF0 & Reg6;
+
+	//Packing and unpacking instructions
+	// R8 = 0xAABB
+	char Reg8 = 0xAABB;
+	// R9 = 0xCCDD
+	char Reg9 = 0xCCD;
+
+	// R10 = 0xCCDDAABB
+	char operandOne = 0x0000FFFF & Reg8;
+	char operandTwo = 0x0000FFFF & Reg9;
+	operandTwo = operandTwo << 0xF;
+	char Reg10 =  operandOne & operandTwo;
+
+	// R11 = 0xFFFFCCDD
+	char Reg11 = Reg10 >> 0xF;
+
+	// Misc instructions
+	// NOP does nothing
+	//Lock a memory register
+	lock(*memlock);
+	lock(*synclock);
+
+	char Reg12 = ASPR;
+
+	unlock(*memlock);
+	unlock(*synclock);
+}
+
+void lock(volatile int *l)
+{
+    while(*l) {}
+    *l = 1;
+}
+
+void unlock(volatile int *l)
+{
+    *l = 0;
+}
+\end{lstlisting}
+
+\end{document}
