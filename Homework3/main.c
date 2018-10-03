@@ -1,8 +1,8 @@
 #include "msp.h"
 
+unsigned short answer;
 
 void twosComp(unsigned short);
-unsigned short answer;
 
 /**
  * main.c
